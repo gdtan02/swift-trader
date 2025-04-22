@@ -1,6 +1,6 @@
 from fastapi import status
 
-from backend.src.errors.error_codes import ERROR_REGISTRY
+from errors.error_codes import ERROR_REGISTRY
 
 class BacktesterError(Exception):
 
