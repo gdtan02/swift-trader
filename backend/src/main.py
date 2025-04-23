@@ -2,9 +2,10 @@ import uvicorn as uv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from data.data_loader import DataLoader
 from errors.base_exception import BacktesterError
 from handlers.exception_handler import appExceptionHandler
-from api.v1.routes import router
+from api.v1.routes import backtestRouter
 
 def createApp() -> FastAPI:
 
@@ -18,13 +19,28 @@ def createApp() -> FastAPI:
         allow_headers=["*"]
     )
 
-    app.include_router(router=router, prefix="/api/v1")
+    app.include_router(router=backtestRouter, prefix="/api/v1")
 
     app.add_exception_handler(BacktesterError, appExceptionHandler)
 
     return app
 
 app = createApp()
+# dataLoader = DataLoader()
+# dataLoader.run(category="exchange-flows")
+
+# dataLoader.run(category="flow-indicator")
+
+# dataLoader.run(category="market-indicator")
+
+# dataLoader.run(category="network-indicator")
+
+# dataLoader.run(category="miner-flows")
+
+# dataLoader.run(category="market-data")
+
+# dataLoader.run(category="network-data")
+
 
 if __name__ == "__main__":
     uv.run(

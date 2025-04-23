@@ -26,7 +26,15 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "statusCode": 401
     },
     "data/fail-to-fetch-data": {
-        "message": "failed to fetch crypto data. Please check the error details.",
+        "message": "Failed to fetch crypto data. Please check the error details.",
+        "statusCode": 400
+    },
+    "data/invalid-provider": {
+        "message": "Invalid provider. The supported providers are 'cryptoquant', 'glassnode' or 'coinbase' only.",
+        "statusCode": 400
+    },
+    "data/invalid-endpoint": {
+        "message": "Invalid endpoint. Please check the documentation.",
         "statusCode": 400
     }
 }

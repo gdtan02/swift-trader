@@ -1,20 +1,15 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from pydantic_settings import BaseSettings
 
 load_dotenv()
 
-class PathConfig(BaseSettings):
+class PathConfig:
 
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR: str = str(Path(__file__).resolve().parent.parent.parent)
     
-    DATA_DIR =  BASE_DIR / "data"
-    RAW_DATA_DIR = DATA_DIR / "raw"
-    FEATURES_DIR = DATA_DIR / "features"
+    DATA_DIR: str = f"{BASE_DIR}/data"
+    RAW_DATA_DIR: str = f"{DATA_DIR}/raw"
+    FEATURES_DIR: str = f"{DATA_DIR}/features"
 
-    MODELS_DIR = BASE_DIR / "models"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    MODELS_DIR: str = f"{BASE_DIR}/models"

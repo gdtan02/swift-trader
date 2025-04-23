@@ -11,7 +11,7 @@ class APIClient:
 
     def __init__(self, provider: Optional[str], apiKey: Optional[str]):
         self.apiKey = os.getenv("CYBOTRADE_API_KEY") or apiKey
-        self.baseUrl = os.getenv("CYBOTRADE_BASE_URL") or "https://api.datasource.cybotrade.rs/"
+        self.baseUrl = os.getenv("CYBOTRADE_BASE_URL") or "https://api.datasource.cybotrade.rs"
         self.provider = provider or "cryptoquant"
 
     def get(self, endpoint: str):
@@ -21,6 +21,8 @@ class APIClient:
 
         url = f"{self.baseUrl}/{self.provider}/{endpoint}"
         headers = { "X-API-Key": self.apiKey }
+
+        print("URL:", url)
 
         try: 
             response = requests.get(url, headers=headers, timeout=30)
