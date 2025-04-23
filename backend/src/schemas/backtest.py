@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
 from enum import Enum
 from datetime import date, datetime, timedelta
 
@@ -28,7 +28,7 @@ class BacktestRequestModel(BaseModel):
     forwardStartDate: Union[date, datetime, None] = None
     forwardEndDate: Union[date, datetime, None] = None
     allowPermutation: bool = False
-    assets: List[str] = ["btc"]
+    assets: Optional[List[str]] = ["btc"]
     runtimeMode: Optional[str] = RuntimeMode.BACKTEST
     entryExitMode: Optional[str] = None
     positionSizingMode: Optional[str] = None
@@ -37,13 +37,13 @@ class BacktestRequestModel(BaseModel):
     takeProfit: Optional[float] = None
 
     @field_validator("endDate")
-    def checkEndDateAfterStartDate(cls, v: Union[date, datetime], values: Dict[str, Any]) -> Union[date, datetime]:
-        if "startDate" in values and v < values["startDate"]:
+    def checkEndDateAfterStartDate(cls, v: Union[date, datetime], info: ValidationInfo) -> Union[date, datetime]:
+        if info.data.get("startDate") and v < info.data.get("startDate"):
             raise BacktesterError("backtest/invalid-date-interval", details="End date must be after start date.")
-         
-        if "startDate" in values and v - timedelta(days=365) < values["startDate"]:
-            raise BacktesterError("backtest/invalid-date-interval", details="Should run the backtest for at least 1 year.")   
         
+        if info.data.get("startDate") and v - timedelta(days=365) < info.data.get("startDate"):
+            raise BacktesterError("backtest/invalid-date-interval", details="Should run the backtest for at least 1 year.")   
+                
         return v
 
     @field_validator("runtimeMode")

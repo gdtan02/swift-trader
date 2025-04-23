@@ -9,8 +9,8 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "message": "Unauthorized access.",
         "statusCode": 401
     },
-    "backtest/end-date-before-start-date": {
-        "message": "Invalid date interval. The end date must before the start date.",
+    "backtest/invalid-date-interval": {
+        "message": "Invalid date interval. Please look at the error details.",
         "statusCode": 400
     },
     "backtest/invalid-runtime-mode": {
