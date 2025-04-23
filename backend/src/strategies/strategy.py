@@ -15,5 +15,5 @@ class BaseStrategy(ABC):
         
     @abstractmethod
     def generateSignals(self) -> pd.Series:
-        """Generate the trade positions (LONG = 1, SHORT = -1, HOLD = 0)"""
+        """Generate the trade signals (BUY = 1, SELL = -1, HOLD = 0)"""
         pass

@@ -18,7 +18,7 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "statusCode": 400
     },
     "backtest/invalid-entry-exit-logic": {
-        "message": "Invalid entry exit logic. The supported entry exit logics are 'mean-reversion', 'trend-following' and 'stoploss-takeprofit' only.",
+        "message": "Invalid entry exit logic. The supported entry exit logics are 'mean-reversion' and 'trend-following' only.",
         "statusCode": 400
     },
     "backtest/invalid-position-sizing-model": {

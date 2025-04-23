@@ -12,11 +12,10 @@ class RuntimeMode(str, Enum):
 class EntryExitStrategy(str, Enum):
     MEAN_REVERSION = "mean-reversion"
     TREND_FOLLOWING = "trend-following"
-    SL_TP = "stoploss-takeprofit"
 
 class PositionSizingMode(str, Enum):
-    FIXED = "fixed"
-    AUTO = "auto"
+    FIXED = "fixed"  # fixed
+    AUTO = "auto"  # use HMM
 
 class BacktestRequestModel(BaseModel):
     strategyName: str
@@ -26,6 +25,8 @@ class BacktestRequestModel(BaseModel):
     commissionRate: float = 0.0006  # 0.06 % by default
     minCommission: float = 0.0
     allowForwardTest: bool = False
+    forwardStartDate: Union[date, datetime, None] = None
+    forwardEndDate: Union[date, datetime, None] = None
     allowPermutation: bool = False
     assets: List[str] = ["btc"]
     runtimeMode: Optional[str] = RuntimeMode.BACKTEST

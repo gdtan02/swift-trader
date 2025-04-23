@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any
 
 from errors.base_exception import BacktesterError
@@ -58,3 +58,16 @@ class Position(BaseModel):
         self.updateUnrealizedPnl()
             
 
+class Positions(BaseModel):
+    """Container for all positions."""
+    positions: Dict[str, Position] = Field(default_factory=dict)
+
+    def getPosition(self, asset: str) -> Position:
+        """Get position of an asset."""
+        if asset not in self.positions:
+            self.positions[asset] = Position(asset=asset)
+        return self.positions[asset]
+    
+    def updatePosition(self, order: Order) -> None:
+        position = self.getPosition(order.asset)
+        position.updatePosition(order)

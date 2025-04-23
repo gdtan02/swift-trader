@@ -22,7 +22,7 @@ class DataLoader:
         self.endpoints = endpointsParams[provider]
         self.dataframes: List[pd.DataFrame] = []
         self.df: pd.DataFrame = pd.DataFrame()
-        self.limit = 50000
+        self.limit = 100000
 
     def run(self, category: str) -> None:
         

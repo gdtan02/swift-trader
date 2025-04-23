@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Optional
 import pandas as pd
 
 
@@ -9,9 +9,11 @@ class Algorithm(ABC):
     def __init__(self, **kwargs):
         self.params = kwargs
         self.isFitted = False
+        self.bestParams: Optional[Any] = None
+        self.bestScore: Optional[Any] = None
 
     @abstractmethod
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, optimize: bool = True):
         """Train the algorithm on the given data."""
         pass
 
