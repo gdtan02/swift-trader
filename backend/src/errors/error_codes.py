@@ -21,6 +21,14 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "message": "Invalid entry exit logic. The supported entry exit logics are 'mean-reversion', 'trend-following' and 'stoploss-takeprofit' only.",
         "statusCode": 400
     },
+    "backtest/invalid-position-sizing-model": {
+        "message": "Invalid position sizing model. The supported position sizing models are 'fixed' or 'auto' only.",
+        "statusCode": 400
+    },
+    "backtest/invalid-range": {
+        "message": "The valid range is between 0 to 1.",
+        "statusCode": 400,
+    },
     "data/missing-api-key": {
         "message": "Failed to fetch crypto data. Please provide a valid API key.",
         "statusCode": 401
