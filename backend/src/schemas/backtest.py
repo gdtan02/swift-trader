@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from pydantic import BaseModel, ValidationInfo, field_validator
 from enum import Enum
 from datetime import date, datetime, timedelta
@@ -74,5 +74,26 @@ class BacktestRequestModel(BaseModel):
         
         return v
 
+class TradeMetrics(BaseModel):
+    totalReturn: float = 0.0   # Total returns in USD
+    totalReturnPct: float = 0.0  # Total returns in percentage
+    finalEquity: float = 0.0   # Final equity in USD
+    annualizedReturn: float = 0.0  # Annualized returns in percentage
+    annualizedVolatility: float = 0.0   # Annualized volatility in percentage
+    sharpeRatio: float = 0.0
+    sortinoRatio: float = 0.0
+    calmarRatio: float = 0.0
+    maxDrawdown: float = 0.0
+    equityCurves: List[Tuple[datetime, float]] = []
+    drawdownCurves: List[Tuple[datetime, float]] = []
+    averagePnl: float = 0.0   # Average profit and loss for the trades
+    profitableTrades: int = 0   # Winning / Profitable trades
+    losingTrades: int = 0
+    winRate: float = 0.0
+    totalTrades: int = 0
+    backtestDuration: int = 0  # Backtest duration in days
+
+
 class BacktestResponseModel(BaseModel):
-    backtestResult: float = 1.0
+    backtestResult: Optional[TradeMetrics] = None
+    forwardTestResult: Optional[TradeMetrics] = None
