@@ -1,0 +1,97 @@
+from typing import List, Optional
+
+import os
+import pandas as pd
+
+from errors.base_exception import BacktesterError
+from configs.path import PathConfig
+from pipeline.features import Feature
+
+
+class FeatureLoader:
+
+    def __init__(self, backtestDate: str):
+        """Initialize the feature loader."""
+        self.backtestDate = backtestDate
+        self.rawDataPath = PathConfig.RAW_DATA_DIR
+        self.featurePath = PathConfig.FEATURES_DIR
+
+        self.exchangeFlowsPath = f"{self.rawDataPath}/cryptoquant_exchange_flows.csv"
+        self.minerFlowsPath = f"{self.rawDataPath}/cryptoquant_miner_flows.csv"
+        self.flowIndicatorPath = f"{self.rawDataPath}/cryptoquant_flow_indicator.csv"
+        self.marketIndicatorPath = f"{self.rawDataPath}/cryptoquant_market_indicator.csv"
+        self.networkIndicatorPath = f"{self.rawDataPath}/cryptoquant_network_indicator.csv"
+        self.marketDataPath = f"{self.rawDataPath}/cryptoquant_market_data.csv"
+        self.networkDataPath = f"{self.rawDataPath}/cryptoquant_network_data.csv" 
+        self.data: pd.DataFrame = pd.DataFrame()
+
+        self.loadAndMergeData()
+    
+    def loadAndMergeData(self):
+        """
+        Read all the CSV raw data files and merge into a single dataframe for feature engineering.
+        The dataset will be sliced on the backtestDate, the data beyond this date will not be used.
+        Raise BacktesterError if the file path does not exist.
+        """
+        dataFrames = []
+        filePaths = [
+            self.exchangeFlowsPath,
+            self.minerFlowsPath,
+            self.flowIndicatorPath,
+            self.marketIndicatorPath,
+            # self.networkIndicatorPath,
+            self.marketDataPath,
+            self.networkDataPath
+        ]
+
+        for filePath in filePaths:
+            if not os.path.exists(filePath):
+                raise BacktesterError("feature/data-not-found")
+            
+            try:
+                df = pd.read_csv(filePath)
+
+                if "datetime" not in df.columns:
+                    raise BacktesterError(details="[BUG] the `datetime` column does not exist in the data file.")
+                
+                dataFrames.append(df)
+            except Exception as e:
+                raise BacktesterError("feature/fail-to-load-data")
+
+        if dataFrames:
+            mergedData = dataFrames[0]
+            for df in dataFrames[1:]:
+                mergedData = pd.merge(mergedData, df, on="datetime", how="outer")   
+
+            mergedData.set_index("datetime", inplace=True)
+            mergedData.sort_index(inplace=True)
+
+            # Save data
+            os.makedirs(PathConfig.RAW_DATA_DIR, exist_ok=True)
+            outputPath = f"{PathConfig.RAW_DATA_DIR}/full_data.csv"
+
+            self.data = mergedData[:self.backtestDate]  # Slice the data
+            self.data.to_csv(outputPath)
+
+            print("Feature Loader is ready.")
+
+            return self.data
+    
+        else:
+            raise BacktesterError("feature/data-not-found")
+
+
+    def loadFeatures(self, data: Optional[pd.DataFrame], features: List[Feature]) -> pd.DataFrame:
+
+        if data is None:
+            data = self.data
+        
+        if features is None or []:
+            raise BacktesterError("feature/missing-features")
+        
+        resultData = data.copy()
+
+        for feature in features:
+            resultData = feature.transform(resultData)
+
+        return resultData

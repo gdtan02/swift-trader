@@ -5,6 +5,10 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "message": "An unexpected error occurred",
         "statusCode": 500
     },
+    "algorithm/model-not-fitted": {
+        "message": "Please run the `fit` method first to train the model.",
+        "statusCode": 400
+    },
     "auth/unauthorized": {
         "message": "Unauthorized access.",
         "statusCode": 401
@@ -25,6 +29,9 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "message": "Invalid position sizing model. The supported position sizing models are 'fixed' or 'auto' only.",
         "statusCode": 400
     },
+    "backtest/invalid-position-size": {
+        "message": "Invalid position size. The position size should be greater than 0.0 and not greater than 1.0."
+    },
     "backtest/invalid-range": {
         "message": "The valid range is between 0 to 1.",
         "statusCode": 400,
@@ -43,6 +50,22 @@ ERROR_REGISTRY: Dict[str, Dict] = {
     },
     "data/invalid-endpoint": {
         "message": "Invalid endpoint. Please check the documentation.",
+        "statusCode": 400
+    },
+    "feature/data-not-found": {
+        "message": "The data does not exist. Please run the DataLoader first.",
+        "statusCode": 400
+    },
+    "feature/fail-to-load-data": {
+        "message": "Error while reading CSV files.",
+        "statusCode": 500
+    },
+    "feature/missing-columns": {
+        "message": "Missing columns required to calculate the features.",
+        "statusCode": 400
+    },
+    "feature/missing-features": {
+        "message": "Please provide the features to load.",
         "statusCode": 400
     }
 }
