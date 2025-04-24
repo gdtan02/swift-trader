@@ -22,11 +22,11 @@ class DataLoader:
         self.endpoints = endpointsParams[provider]
         self.dataframes: List[pd.DataFrame] = []
         self.df: pd.DataFrame = pd.DataFrame()
-        self.limit = 100000
+        self.limit = 70000
 
     def run(self, category: str) -> None:
         
-        startTime = getStartTime(dayInterval=10*365)   # Default 10 years
+        startTime = getStartTime(dayInterval=7*365)   # Default 7 years
         startTime = convertDatetimeToUnixTimestamp(startTime)
         
         if category not in self.endpoints:
