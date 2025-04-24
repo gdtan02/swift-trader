@@ -13,7 +13,7 @@ class Algorithm(ABC):
         self.isFitted = False
         
     @abstractmethod
-    def fit(self, X, y=None, optimize: bool = True):
+    def fit(self, X, y = None, optimize: bool = True):
         """Train the algorithm on the given data."""
         pass
 

@@ -67,5 +67,9 @@ ERROR_REGISTRY: Dict[str, Dict] = {
     "feature/missing-features": {
         "message": "Please provide the features to load.",
         "statusCode": 400
+    },
+    "strategy/data-not-loaded": {
+        "message": "Failed to load the data to run strategy.",
+        "statusCode": 400
     }
 }

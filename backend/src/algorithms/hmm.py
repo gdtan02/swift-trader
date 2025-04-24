@@ -23,7 +23,7 @@ class HMMRegimeModel(Algorithm):
 
         self.loadModel()
 
-    def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None, optimize: bool = True):
+    def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None, optimize: bool = False):
         """Train or optimize the model."""
         if optimize:
             self.model, self.bestParams = self.gridSearch(X)
@@ -46,6 +46,9 @@ class HMMRegimeModel(Algorithm):
             raise BacktesterError("algorithm/model-not-fitted")
         return self.model.predict_proba(X)
     
+    def getBestParams(self):
+        return self.bestParams
+
     def gridSearch(self, X):
         """Perform grid search for hyperparameter optimization."""
         param_grid = {
@@ -75,13 +78,15 @@ class HMMRegimeModel(Algorithm):
 
             pipeline.fit(X_train)
             score = pipeline.score(X_val)
+            
+            print("params=", param, "score=", score)
 
             if score > bestScore:
                 bestScore = score
                 bestModel = pipeline
                 bestParams = param
             
-            print(f"Best parameters: {bestParams}, Best validation log-likelihood: {bestScore}")
+        print(f"Best parameters: {bestParams}, Best validation log-likelihood: {bestScore}")
 
         return bestModel, bestParams
     
@@ -89,6 +94,7 @@ class HMMRegimeModel(Algorithm):
         """Load the model from the model path if exist, else initialize the model with default hyperparameters."""
         if os.path.exists(self.modelPath):
             self.model = joblib.load(self.modelPath)
+            self.isFitted = True
         else:
             self.model = Pipeline(steps=[
                 ("scaler", StandardScaler()),
