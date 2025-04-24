@@ -20,13 +20,14 @@ class DataLoader:
 
         self.apiClient = APIClient(apiKey=apiKey, provider=provider)
         self.endpoints = endpointsParams[provider]
-        self.dataframes: List[pd.DataFrame] = []
-        self.df: pd.DataFrame = pd.DataFrame()
-        self.limit = 100000
+        self.limit = 70000
 
     def run(self, category: str) -> None:
+
+        df: pd.DataFrame = pd.DataFrame()   # Clean the dataframe
+        dataframes: List[pd.DataFrame] = []
         
-        startTime = getStartTime(dayInterval=10*365)   # Default 10 years
+        startTime = getStartTime(dayInterval=7*365)   # Default 7 years
         startTime = convertDatetimeToUnixTimestamp(startTime)
         
         if category not in self.endpoints:
@@ -60,16 +61,16 @@ class DataLoader:
                 columnNames = { name: f"exchange_{name}" for name in columnNames }
                 data.rename(columns=columnNames, inplace=True)
 
-            self.dataframes.append(data)
+            dataframes.append(data)
 
-        self.df = pd.concat(self.dataframes, sort=True, axis=1)
-        self.df.sort_index(inplace=True)
+        df = pd.concat(dataframes, sort=True, axis=1)
+        df.sort_index(inplace=True)
 
         # Clean data
-        self.df.drop_duplicates(inplace=True)
-        self.df.interpolate(method="linear", limit_direction="forward", inplace=True)
+        df.drop_duplicates(inplace=True)
+        df.interpolate(method="linear", limit_direction="forward", inplace=True)
 
-        self.saveData(data=self.df, category=category, provider = self.apiClient.provider)
+        self.saveData(data=df, category=category, provider = self.apiClient.provider)
 
     def saveData(self, data: pd.DataFrame, category: str, provider: str):
         os.makedirs(PathConfig.RAW_DATA_DIR, exist_ok=True)

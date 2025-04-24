@@ -2,6 +2,7 @@ import uvicorn as uv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from pipeline.feature_loader import FeatureLoader
 from configs.path import PathConfig
 from data.data_loader import DataLoader
 from errors.base_exception import BacktesterError
@@ -29,13 +30,13 @@ def createApp() -> FastAPI:
 app = createApp()
 
 if __name__ == "__main__":
-    uv.run(
-        "main:app",
-        reload=True
-    )
+    # uv.run(
+    #     "main:app",
+    #     reload=True
+    # )
 
     # PathConfig.createDirectories(PathConfig)
-    # dataLoader = DataLoader()
+    dataLoader = DataLoader()
     # dataLoader.run(category="exchange-flows")
     # dataLoader.run(category="flow-indicator")
     # dataLoader.run(category="market-indicator")
@@ -43,3 +44,8 @@ if __name__ == "__main__":
     # dataLoader.run(category="miner-flows")
     # dataLoader.run(category="market-data")
     # dataLoader.run(category="network-data")
+
+
+    featureLoader = FeatureLoader("2023-12-31")
+    
+    print("Done.")

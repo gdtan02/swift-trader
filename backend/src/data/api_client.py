@@ -25,7 +25,7 @@ class APIClient:
         print("URL:", url)
 
         try: 
-            response = requests.get(url, headers=headers, timeout=30)
+            response = requests.get(url, headers=headers, timeout=60)
             response.raise_for_status()
             return response.json()
     
