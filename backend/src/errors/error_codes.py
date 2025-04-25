@@ -36,6 +36,10 @@ ERROR_REGISTRY: Dict[str, Dict] = {
         "message": "The valid range is between 0 to 1.",
         "statusCode": 400,
     },
+    "backtest/date-interval-out-of-range": {
+        "message": "The starting date or the ending date is outside of valid date interval range.",
+        "statusCode": 400,
+    },
     "data/missing-api-key": {
         "message": "Failed to fetch crypto data. Please provide a valid API key.",
         "statusCode": 401
