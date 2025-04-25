@@ -3,6 +3,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator
 from enum import Enum
 from datetime import date, datetime, timedelta
 
+from schemas.trade import TradeMetrics
 from errors.base_exception import BacktesterError
 
 class RuntimeMode(str, Enum):
@@ -19,14 +20,14 @@ class PositionSizingMode(str, Enum):
 
 class BacktestRequestModel(BaseModel):
     strategyName: str
-    startDate: Union[date, datetime]
-    endDate: Union[date, datetime]
+    startDate: str
+    endDate: str
     initialCapital: float = 100000.0
     commissionRate: float = 0.0006  # 0.06 % by default
     minCommission: float = 0.0
     allowForwardTest: bool = False
-    forwardStartDate: Union[date, datetime, None] = None
-    forwardEndDate: Union[date, datetime, None] = None
+    forwardStartDate: str = None
+    forwardEndDate: str = None
     allowPermutation: bool = False
     assets: Optional[List[str]] = ["btc"]
     runtimeMode: Optional[str] = RuntimeMode.BACKTEST
@@ -38,11 +39,16 @@ class BacktestRequestModel(BaseModel):
 
     @field_validator("endDate")
     def checkEndDateAfterStartDate(cls, v: Union[date, datetime], info: ValidationInfo) -> Union[date, datetime]:
-        if info.data.get("startDate") and v < info.data.get("startDate"):
-            raise BacktesterError("backtest/invalid-date-interval", details="End date must be after start date.")
-        
-        if info.data.get("startDate") and v - timedelta(days=365) < info.data.get("startDate"):
-            raise BacktesterError("backtest/invalid-date-interval", details="Should run the backtest for at least 1 year.")   
+
+        if info.data.get("startDate"):
+            startDate = datetime.strptime(info.data.get("startDate"), "%Y-%m-%d %H:%M:%S")
+            endDate = datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+
+            if endDate < startDate:
+                raise BacktesterError("backtest/invalid-date-interval", details="End date must be after start date.")
+            
+            if endDate - timedelta(days=365) < startDate:
+                raise BacktesterError("backtest/invalid-date-interval", details="Should run the backtest for at least 1 year.")   
                 
         return v
 
@@ -73,25 +79,6 @@ class BacktestRequestModel(BaseModel):
             raise BacktesterError("backtest/invalid-range")
         
         return v
-
-class TradeMetrics(BaseModel):
-    totalReturn: float = 0.0   # Total returns in USD
-    totalReturnPct: float = 0.0  # Total returns in percentage
-    finalEquity: float = 0.0   # Final equity in USD
-    annualizedReturn: float = 0.0  # Annualized returns in percentage
-    annualizedVolatility: float = 0.0   # Annualized volatility in percentage
-    sharpeRatio: float = 0.0
-    sortinoRatio: float = 0.0
-    calmarRatio: float = 0.0
-    maxDrawdown: float = 0.0
-    equityCurves: List[Tuple[datetime, float]] = []
-    drawdownCurves: List[Tuple[datetime, float]] = []
-    averagePnl: float = 0.0   # Average profit and loss for the trades
-    profitableTrades: int = 0   # Winning / Profitable trades
-    losingTrades: int = 0
-    winRate: float = 0.0
-    totalTrades: int = 0
-    backtestDuration: int = 0  # Backtest duration in days
 
 
 class BacktestResponseModel(BaseModel):
