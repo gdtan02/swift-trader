@@ -1,7 +1,12 @@
+from typing import Annotated
 import uvicorn as uv
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from schemas.backtest import BacktestRequestModel, BacktestResponseModel
+from schemas.base import ResponseModel
+from services.backtester import BacktesterService
+# from strategies.xgb_strategy import XGBoostStrategy
 from pipeline.feature_loader import FeatureLoader
 from configs.path import PathConfig
 from data.data_loader import DataLoader
@@ -9,43 +14,45 @@ from errors.base_exception import BacktesterError
 from handlers.exception_handler import appExceptionHandler
 from api.v1.routes import backtestRouter
 
-def createApp() -> FastAPI:
+_backtesterService = BacktesterService()
 
-    app = FastAPI()
+def getBacktesterService() -> BacktesterService:
+    global _backtesterService
+    if _backtesterService is None:
+        _backtesterService = BacktesterService()
+    return _backtesterService
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"]
+BacktesterDependency = Annotated[BacktesterService, Depends(getBacktesterService)]
+
+
+backtestRouter = APIRouter(prefix="/backtest", tags=["Backtester"])
+
+@backtestRouter.post("/simulate-trade", response_model=ResponseModel[BacktestResponseModel])
+async def simulateTrade(request: BacktestRequestModel, backtestService: BacktesterService = Depends(getBacktesterService)):
+
+    result: BacktestResponseModel = await backtestService.run(request)
+
+    return ResponseModel(
+        success=True,
+        data = result,
+        error = None
     )
 
-    app.include_router(router=backtestRouter, prefix="/api/v1")
+app = FastAPI()
 
-    app.add_exception_handler(BacktesterError, appExceptionHandler)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
-    return app
-
-app = createApp()
+app.include_router(backtestRouter, prefix="/api/v1")
+app.add_exception_handler(BacktesterError, appExceptionHandler)
 
 if __name__ == "__main__":
-    # uv.run(
-    #     "main:app",
-    #     reload=True
-    # )
-
-    # PathConfig.createDirectories(PathConfig)
-    dataLoader = DataLoader()
-    # dataLoader.run(category="exchange-flows")
-    # dataLoader.run(category="flow-indicator")
-    # dataLoader.run(category="market-indicator")
-    # dataLoader.run(category="network-indicator")
-    # dataLoader.run(category="miner-flows")
-    # dataLoader.run(category="market-data")
-    # dataLoader.run(category="network-data")
-
-
-    featureLoader = FeatureLoader("2023-12-31")
-    
-    print("Done.")
+    uv.run(
+        "main:app",
+        reload=True
+    )

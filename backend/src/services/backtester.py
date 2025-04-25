@@ -12,7 +12,7 @@ from pipeline.feature_loader import FeatureLoader
 from strategies.position_sizer import BasePositionSizer, FixedProportionPositionSizer, HMMPositionSizer
 from strategies.strategy import BaseStrategy
 from schemas.backtest import BacktestRequestModel, BacktestResponseModel, EntryExitStrategy, PositionSizingMode
-from schemas.trade import TradePortfolio, TradeMetrics
+from schemas.trade import TradePortfolio, TradeMetrics, TradeStatistic
 
 
 class BacktesterService:
@@ -64,11 +64,11 @@ class BacktesterService:
             endDate = str(data.index.max()),
             equityOnCash = self.initialCapital,
             positions = Positions(),
-            returns = [],
             tradeHistory = [],
             equityCurves = [],
             drawdownHistory = [],
-            results = TradeMetrics()
+            results = TradeMetrics(),
+            tradeStatistics = TradeStatistic()
         )
 
         # Generate positions based on the signals 
