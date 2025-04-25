@@ -2,10 +2,14 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 
-class XGBModel:
+from algorithms.algorithm import Algorithm
+
+class XGBModel(Algorithm):
     def __init__(self, model_path: str = "models/xgb_model.joblib", random_state: int = 42):
         self.name = "xgb"
         self.is_fitted = False
@@ -45,8 +49,8 @@ class XGBModel:
         }
         tscv = TimeSeriesSplit(n_splits=5)
         search = RandomizedSearchCV(
-            XGBClassifier(
-                objective='multi:softmax',
+            estimator=XGBClassifier(
+                objective='multi:softprob',
                 num_class=3,
                 eval_metric='mlogloss',
                 random_state=self.random_state
@@ -69,7 +73,7 @@ class XGBModel:
             self.is_fitted = True
         else:
             self.model = XGBClassifier(
-                objective='multi:softmax',
+                objective='multi:softprob',
                 num_class=3,
                 eval_metric='mlogloss',
                 random_state=self.random_state

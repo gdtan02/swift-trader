@@ -51,7 +51,7 @@ class FeatureLoader:
                 self.minerFlowsPath,
                 self.flowIndicatorPath,
                 self.marketIndicatorPath,
-                # self.networkIndicatorPath,
+                self.networkIndicatorPath,
                 self.marketDataPath,
                 self.networkDataPath
             ]
@@ -64,19 +64,18 @@ class FeatureLoader:
                     df = pd.read_csv(filePath)
 
                     if "datetime" not in df.columns:
-                        raise BacktesterError(details="[BUG] the `datetime` column does not exist in the data file.")
+                        raise BacktesterError("feature/missing-columns", details="[BUG] the `datetime` column does not exist in the data file.")
                     
+                    df["datetime"] = pd.to_datetime(df["datetime"])
+                    df.set_index("datetime", inplace=True)
+                    df.sort_index(inplace=True)
+
                     dataFrames.append(df)
                 except Exception as e:
-                    raise BacktesterError("feature/fail-to-load-data")
+                    raise BacktesterError("feature/fail-to-load-data", details={e})
 
             if dataFrames:
-                mergedData = dataFrames[0]
-                for df in dataFrames[1:]:
-                    mergedData = pd.merge(mergedData, df, on="datetime", how="outer")   
-
-                mergedData.set_index("datetime", inplace=True)
-                mergedData.sort_index(inplace=True)
+                mergedData = pd.concat(dataFrames, sort=True, axis=1)
 
                 # Save data
                 os.makedirs(self.rawDataPath, exist_ok=True)
@@ -98,7 +97,7 @@ class FeatureLoader:
         if data is None:
             data = self.data
         
-        if features is None or []:
+        if features is None:
             raise BacktesterError("feature/missing-features")
         
         resultData = data.copy()
