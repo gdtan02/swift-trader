@@ -75,5 +75,9 @@ ERROR_REGISTRY: Dict[str, Dict] = {
     "strategy/data-not-loaded": {
         "message": "Failed to load the data to run strategy.",
         "statusCode": 400
+    },
+    "strategy/invalid-threshold": {
+        "message": "Invalid threshold value. Please check the details for the valid range.",
+        "statusCode": 400
     }
 }
