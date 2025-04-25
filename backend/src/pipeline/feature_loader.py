@@ -112,7 +112,4 @@ class FeatureLoader:
 
         marketPriceFeatures = ["close", "open", "high", "low", "volume"]
 
-        if marketPriceFeatures not in self.data.columns:
-            raise BacktesterError("feature/missing-features")
-        
         return self.data[marketPriceFeatures]
