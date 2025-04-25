@@ -10,9 +10,10 @@ from pipeline.features import Feature
 
 class FeatureLoader:
 
-    def __init__(self, backtestDate: str):
+    def __init__(self, startDate: str, endDate: str):
         """Initialize the feature loader."""
-        self.backtestDate = backtestDate
+        self.startDate = startDate
+        self.endDate = endDate
         self.rawDataPath: str = PathConfig.RAW_DATA_DIR
         self.featurePath: str = PathConfig.FEATURES_DIR
 
@@ -26,6 +27,36 @@ class FeatureLoader:
         self.data: pd.DataFrame = pd.DataFrame()
 
         self._loadAndMergeData()
+
+    def loadFullData(self):
+        """Load the full data."""
+        if self.data is not None:
+            return self.data
+        
+        else:
+            raise BacktesterError("feature/fail-to-load-data")
+        
+    def loadFeatures(self, data: Optional[pd.DataFrame] = None, features: List[Feature] = None) -> pd.DataFrame:
+        """Add the specified features into the DataFrame and return it."""
+        if data is None:
+            data = self.data
+        
+        if features is None:
+            raise BacktesterError("feature/missing-features")
+        
+        resultData = data.copy()
+
+        for feature in features:
+            resultData = feature.transform(resultData)
+
+        return resultData
+    
+    def loadMarketPriceData(self):
+        """Load the market data (close price) only for the backtester to simulate trade."""
+        if "close" not in self.data.columns:
+            raise BacktesterError("feature/missing-columns")
+
+        return self.data[["close"]]
     
     def _loadAndMergeData(self):
         """
@@ -34,12 +65,12 @@ class FeatureLoader:
         Raise BacktesterError if the file path does not exist.
         """
         try:
+            # Load the data if available 
             filePath = f"{self.rawDataPath}/cryptoquant_full_data.csv"
+
             self.data = pd.read_csv(filePath)
             self.data.set_index("datetime", inplace=True)
             self.data.sort_index(inplace=True)
-
-            print("Feature Loader is ready.")
 
             return self.data
 
@@ -92,23 +123,3 @@ class FeatureLoader:
                 raise BacktesterError("feature/data-not-found")
 
 
-    def loadFeatures(self, data: Optional[pd.DataFrame] = None, features: List[Feature] = None) -> pd.DataFrame:
-
-        if data is None:
-            data = self.data
-        
-        if features is None:
-            raise BacktesterError("feature/missing-features")
-        
-        resultData = data.copy()
-
-        for feature in features:
-            resultData = feature.transform(resultData)
-
-        return resultData
-    
-    def loadMarketData(self):
-
-        marketPriceFeatures = ["close", "open", "high", "low", "volume"]
-
-        return self.data[marketPriceFeatures]
