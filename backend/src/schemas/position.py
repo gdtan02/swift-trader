@@ -71,3 +71,9 @@ class Positions(BaseModel):
     def updatePosition(self, order: Order) -> None:
         position = self.getPosition(order.asset)
         position.updatePosition(order)
+
+    def getTotalEquityValue(self):
+        totalEquityValue = 0.0
+        for position in self.positions.values():
+            totalEquityValue += position.totalValue
+        return totalEquityValue

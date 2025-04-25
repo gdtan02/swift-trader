@@ -4,7 +4,7 @@ from datetime import date, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from backend.src.errors.base_exception import BacktesterError
+from errors.base_exception import BacktesterError
 
 class OrderType(str, Enum):
     MARKET = "market"
