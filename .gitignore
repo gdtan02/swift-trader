@@ -172,3 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Data
+backend/data/raw/*
+backend/data/features/*

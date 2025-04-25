@@ -1,10 +1,10 @@
 from fastapi.responses import JSONResponse
 from fastapi import Request
-from backend.src.errors import BacktesterError
+from errors import BacktesterError
 
 async def appExceptionHandler(request: Request, exc: BacktesterError):
     
-    return JSONResponse(
+  return JSONResponse(
         status_code= exc.statusCode,
         content={
             "success": False,
