@@ -26,11 +26,11 @@ class OrderStatus(str, Enum):
 class Order(BaseModel):
     id: UUID = uuid4()
     timestamp: Union[date, datetime]
-    asset: str
+    asset: str = "btc"
     orderType: OrderType
     orderSide: OrderSide
     status: OrderStatus = "pending"
-    quantity: float
+    quantity: Optional[float] = 0.0
     price: Optional[float] = None
     executionPrice: Optional[float] = None
     executionTimestamp: Optional[datetime] = None
@@ -57,7 +57,7 @@ class Order(BaseModel):
     @field_validator("quantity")
     def validateQuantity(cls, v) -> float:
         """ Validate that quantity must be positive"""
-        if v <= 0:
+        if v is not None and v < 0:
             raise BacktesterError("trade/invalid-order-quantity")
         return v
     

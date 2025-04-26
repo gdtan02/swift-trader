@@ -3,7 +3,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator
 from enum import Enum
 from datetime import date, datetime, timedelta
 
-from schemas.trade import TradeMetrics
+from schemas.trade import TradeMetrics, TradePortfolio, TradeStatistic
 from errors.base_exception import BacktesterError
 
 class RuntimeMode(str, Enum):
@@ -26,8 +26,8 @@ class BacktestRequestModel(BaseModel):
     commissionRate: float = 0.0006  # 0.06 % by default
     minCommission: float = 0.0
     allowForwardTest: bool = False
-    forwardStartDate: str = None
-    forwardEndDate: str = None
+    forwardStartDate: Optional[str] = None
+    forwardEndDate: Optional[str] = None
     allowPermutation: bool = False
     assets: Optional[List[str]] = ["btc"]
     runtimeMode: Optional[str] = RuntimeMode.BACKTEST
@@ -83,4 +83,6 @@ class BacktestRequestModel(BaseModel):
 
 class BacktestResponseModel(BaseModel):
     backtestResult: Optional[TradeMetrics] = None
+    backtestStatistics: Optional[TradeStatistic] = None
     forwardTestResult: Optional[TradeMetrics] = None
+    forwardTestStatistics: Optional[TradeStatistic] = None

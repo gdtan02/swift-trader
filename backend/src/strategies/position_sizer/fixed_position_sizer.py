@@ -12,5 +12,5 @@ class FixedProportionPositionSizer(BasePositionSizer):
         self.proportion = proportion
 
 
-    def calculatePositionSize(self, availableCash: float) -> float:
+    def calculatePositionSize(self, orderDate: str, availableCash: float) -> float:
         return availableCash * self.proportion

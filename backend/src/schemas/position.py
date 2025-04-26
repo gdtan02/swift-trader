@@ -8,22 +8,19 @@ class Position(BaseModel):
     asset: str
     quantity: float = 0.0
     avgEntryPrice: float = 0.0
-    currentPrice: float = 0.0
-    unrealizedPnl: float = 0.0
-    realizedPnl: float = 0.0
 
-    @property
-    def totalValue(self) -> float:
-        """Current position value"""
-        return self.quantity * self.currentPrice
+    # @property
+    # def totalValue(self) -> float:
+    #     """Current position value"""
+    #     return self.quantity * self.avgEntryPrice
     
-    def updateUnrealizedPnl(self) -> float:
-        """Unrealized profit and loss based on current price"""
-        if self.quantity <= 0:
-            self.unrealizedPnl = 0.0
-        else:
-            self.unrealizedPnl = (self.currentPrice - self.avgEntryPrice) * self.quantity
-        return self.unrealizedPnl
+    # def updateUnrealizedPnl(self) -> float:
+    #     """Unrealized profit and loss based on current price"""
+    #     if self.quantity <= 0:
+    #         self.unrealizedPnl = 0.0
+    #     else:
+    #         self.unrealizedPnl = (self.currentPrice - self.avgEntryPrice) * self.quantity
+    #     return self.unrealizedPnl
     
     def updatePosition(self, order: Order) -> None:
         """Update the position based on an executed order."""
@@ -44,9 +41,9 @@ class Position(BaseModel):
             if order.quantity > self.quantity:
                 raise BacktesterError("trade/insufficient-quantity")
             
-            if self.quantity > 0:
-                tradePnl = (order.executionPrice * self.avgEntryPrice) * order.quantity
-                self.realizedPnl += tradePnl
+            # if self.quantity > 0:
+            #     tradePnl = (order.executionPrice * self.avgEntryPrice) * order.quantity
+            #     self.realizedPnl += tradePnl
 
             newQuantity = self.quantity - order.quantity
 
@@ -55,7 +52,7 @@ class Position(BaseModel):
 
             self.quantity = max(0, newQuantity)
 
-        self.updateUnrealizedPnl()
+        # self.updateUnrealizedPnl()
             
 
 class Positions(BaseModel):
@@ -72,8 +69,8 @@ class Positions(BaseModel):
         position = self.getPosition(order.asset)
         position.updatePosition(order)
 
-    def getTotalEquityValue(self):
+    def getTotalEquityValue(self, currentPrice: float):
         totalEquityValue = 0.0
         for position in self.positions.values():
-            totalEquityValue += position.totalValue
+            totalEquityValue += (position.quantity * currentPrice)
         return totalEquityValue

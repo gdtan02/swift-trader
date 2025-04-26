@@ -14,32 +14,17 @@ from strategies.position_sizer.base_position_sizer import BasePositionSizer
 class HMMPositionSizer(BasePositionSizer):
     """Automatic adjust position sizing based on market regime."""
     
-    def __init__(self, backtestEndDate: str, data: Optional[pd.DataFrame] = None, loader: Optional[FeatureLoader] = None, lookBackPeriod: int = 30, tradeFees: float = 0.0006):
+    def __init__(self, backtestEndDate: str, lookBackPeriod: int = 30, tradeFees: float = 0.0006):
 
-        self.data = data
-        self.loader = loader if loader is not None else FeatureLoader(backtestDate=backtestEndDate)
         self.backtestEndDate = backtestEndDate
-        
         self.selectedFeatures: List[str] = ["daily_return", "log_volatility"]
-        self.features: List[Feature] = None
-        
         self.lookBackPeriod = lookBackPeriod
         self.tradeFees = tradeFees
 
-        self.initializeStrategy()
 
-    def initializeStrategy(self, train: bool = False):
+    def initializeStrategy(self, data: pd.DataFrame, train: bool = False):
 
-        self.features = [
-            AdjustedReturnRate(tradeFees=self.tradeFees),
-            Volatility(windowSize=self.lookBackPeriod)
-        ]
-        dataWithFeatures = self.loader.loadFeatures(data = self.data, features=self.features)
-        dataWithFeatures.dropna(inplace=True)
-
-        dataWithFeatures.to_csv(f"{PathConfig.FEATURES_DIR}/hmm_features.csv")
-
-        self.data = dataWithFeatures
+        self.data = data
 
         if self.data is None:
             raise BacktesterError("strategy/data-not-loaded")
@@ -80,10 +65,12 @@ class HMMPositionSizer(BasePositionSizer):
 
     def _initializeModel(self, data, train=False):
 
+        data.dropna(inplace=True)
+
         self.model: Algorithm = HMMRegimeModel()
 
-        if train or not self.model.isFitted:
-            self.model.fit(data.loc[:self.backtestEndDate][self.selectedFeatures], optimize=True)  # Train until the backtest end date
+        # if train or not self.model.isFitted:
+        #     self.model.fit(data.loc[:self.backtestEndDate][self.selectedFeatures], optimize=True)  # Train until the backtest end date
 
         regimes = self.model.predict(data)  # Predict the regimes for all the features
         data = data.copy()

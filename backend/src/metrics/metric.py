@@ -6,15 +6,20 @@ from schemas.order import Order, OrderSide
 from schemas.trade import TradePortfolio, TradeMetrics, TradeStatistic
 
 class Metric:
-
+    
+    HOURS_IN_YEAR = 365 * 24
+    
+    
     def __init__(self, portfolio: TradePortfolio, tradeRecords: pd.DataFrame):
 
         self.initialCapital = portfolio.initialCapital
         self.orders = portfolio.tradeHistory
-        self.returns = tradeRecords['returns']
+        self.returns = tradeRecords['pnl']
         self.equityValues = tradeRecords['equity']
         self.drawdownValues = tradeRecords['drawdown']
-        self.totalTradingDays = len(self.equityValues) / 365.0
+
+        self.totalPeriods = len(self.returns)
+        self.totalYears = len(self.equityValues) / self.HOURS_IN_YEAR
         self.results: TradeMetrics = TradeMetrics(
             totalReturn =self.totalReturn(),
             totalReturnPct = self.totalReturnInPct(),
@@ -25,9 +30,9 @@ class Metric:
             sortinoRatio = self.sortinoRatio(),
             maxDrawdown = self.maxDrawdown(),
             calmarRatio = self.calmarRatio(),
-            backtestDuration = self.totalTradingDays
+            backtestDuratioInYrs = self.totalYears
         )
-        self.tradeStatistics: TradeStatistic = self.getTradeStatistics()
+        self.tradeStatistics: TradeStatistic = self.calculateTradeStatistics()
 
     def getResults(self) -> TradeMetrics:
         return self.results
@@ -43,12 +48,11 @@ class Metric:
 
     def annualizedReturn(self):
         """Compound Annual Growth Rate"""
-        totalReturnPct = self.totalReturnInPct()
-        return np.power((1 + totalReturnPct), 252 / self.totalTradingDays) - 1
+        return (self.equityValues.iloc[-1] / self.initialCapital) ** (1 / self.totalYears) - 1
     
     def annualizedVolatility(self):
         """Standard deviation of returns"""
-        return self.returns.std() * np.sqrt(252)
+        return self.returns.std() * np.sqrt(self.HOURS_IN_YEAR)
     
     def sharpeRatio(self):
         annualizedReturn = self.annualizedReturn()
@@ -57,11 +61,11 @@ class Metric:
     
     def sortinoRatio(self):
         downsideReturns = self.returns[self.returns < 0]
-        downsideDeviation = downsideReturns.std() * np.sqrt(252) if len(downsideReturns) > 0 else 0
-        return self.returns.mean() / downsideDeviation if downsideDeviation > 0 else None
+        downsideDeviation = downsideReturns.std() * np.sqrt(self.HOURS_IN_YEAR) if len(downsideReturns) > 0 else 0
+        return self.annualizedReturn() / downsideDeviation if downsideDeviation > 0 else None
 
     def maxDrawdown(self):
-        return self.drawdownValues.min()
+        return self.drawdownValues.min() * 100
 
     def calmarRatio(self):
         mdd = abs(self.maxDrawdown())
@@ -71,20 +75,23 @@ class Metric:
         """Adjusted returns for trading fees (0.06% per trade)"""
         return self.returns * (1 - 0.0006)
     
-    def getTradeStatistics(self) -> TradeStatistic:
+    def calculateTradeStatistics(self) -> TradeStatistic:
 
-        sellTrades: List[Order] = [order for order in self.orders if order.orderSide == OrderSide.SELL]
-        profitableTrades = sum([1 for trade in sellTrades if trade.pnl > 0])
-        losingTrades = sum([1 for trade in sellTrades if trade.pnl < 0])
-        winRate = profitableTrades / len(sellTrades)
-        avgTradePnl = pd.Series([order.pnl for order in sellTrades]).mean()
+        sellTrades: List[Order] = [order for _, order in self.orders if order.orderSide == OrderSide.SELL]
+        pnl_list = [trade.pnl for trade in sellTrades]
+
+        profitableTrades = sum(1 for trade in sellTrades if trade.pnl > 0)
+        losingTrades = sum(1 for trade in sellTrades if trade.pnl < 0)
+        totalTrades = len(pnl_list)
+        winRate = profitableTrades / totalTrades if totalTrades > 0 else 0.0
+        avgTradePnl = pd.Series(pnl_list).mean()
 
         stats: TradeStatistic = TradeStatistic(
             averagePnl=avgTradePnl,
             profitableTrades=profitableTrades,
             losingTrades=losingTrades,
             winRate=winRate,
-            totalTrades=sellTrades
+            totalTrades=totalTrades
         )
         return stats
 

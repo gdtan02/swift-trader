@@ -53,7 +53,11 @@ class XGBModel(Algorithm):
                 objective='multi:softprob',
                 num_class=3,
                 eval_metric='mlogloss',
-                random_state=self.random_state
+                random_state=self.random_state,
+                n_estimators=100,
+                max_depth = 7,
+                learning_rate = 0.05,
+                subsample = 0.7
             ),
             param_distributions=param_grid,
             n_iter=10,
@@ -76,7 +80,11 @@ class XGBModel(Algorithm):
                 objective='multi:softprob',
                 num_class=3,
                 eval_metric='mlogloss',
-                random_state=self.random_state
+                random_state=self.random_state,
+                n_estimators=100,
+                max_depth = 7,
+                learning_rate = 0.05,
+                subsample = 0.7
             )
 
     def save_model(self):

@@ -3,10 +3,13 @@ from typing import Dict, List, Optional, Union, Any
 
 import pandas as pd
 
+from pipeline.features import Feature
+from pipeline.indicators import AdjustedReturnRate, Volatility
+from strategies.xgb_strategy import XGBoostStrategy
 from schemas.order import Order, OrderSide, OrderStatus
 from configs.path import PathConfig
 from metrics.metric import Metric
-from schemas.position import Position, Positions
+from schemas.position import Positions
 from errors.base_exception import BacktesterError
 from pipeline.feature_loader import FeatureLoader
 from strategies.position_sizer import BasePositionSizer, FixedProportionPositionSizer, HMMPositionSizer
@@ -29,33 +32,48 @@ class BacktesterService:
         self.initializeBacktesterSettings(settings)
 
         # Load data
-        data = self.featureLoader.loadMarketData()
+        priceData = self.featureLoader.loadMarketPriceData()
 
-        if self.startDate < data.index.min() or self.endDate > data.index.max():
+        if self.startDate < priceData.index.min() or self.endDate > priceData.index.max():
             raise BacktesterError("backtest/date-interval-out-of-range") 
 
-        backtestMarketData = data.loc[self.startDate:self.endDate]
-        self.backtestPortfolio = self.simulateTrade(backtestMarketData)
+        backtestPriceData = priceData.loc[self.startDate:self.endDate]
+
+        # Initialize strategy and generate signals
+        self.fullData = self.featureLoader.loadFullData()        
+        self.initializeStrategy(strategyName=self.strategyName, fullData=self.fullData)
+        
+        self.backtestPortfolio = self.simulateTrade(self.features[self.startDate: self.endDate], backtestPriceData, backtest=True)
 
         if self.allowForwardTest:
 
-            if self.forwardStartDate < data.index.min() or self.forwardEndDate > data.index.max():
+            if self.forwardStartDate < priceData.index.min() or self.forwardEndDate > priceData.index.max():
                 raise BacktesterError("backtest/date-interval-out-of-range") 
 
-            forwardTestMarketData = data.loc[self.forwardStartDate:self.forwardEndDate]
-            self.forwardTestPortfolio = self.simulateTrade(forwardTestMarketData)
+            forwardTestPriceData = priceData.loc[self.forwardStartDate:self.forwardEndDate]
+            self.forwardTestPortfolio = self.simulateTrade(self.features[self.forwardStartDate:self.forwardEndDate], forwardTestPriceData, backtest=False)
 
         print("Backtest Portfolio: ", self.backtestPortfolio, "ForwardTest Portfolio: ", self.forwardTestPortfolio)
 
+        return BacktestResponseModel(
+            backtestResult=self.backtestPortfolio.results,
+            backtestStatistics=self.backtestPortfolio.tradeStatistics,
+            forwardTestResult=self.forwardTestPortfolio.results,
+            forwardTestStatistics=self.forwardTestPortfolio.tradeStatistics
+        )
+
         
-    def simulateTrade(self, data: pd.DataFrame) -> TradePortfolio:
+    def simulateTrade(self, features: pd.DataFrame, data: pd.DataFrame, backtest: bool = False) -> TradePortfolio:
 
         if self.entryExitLogic not in EntryExitStrategy:
             raise BacktesterError("backtest/invalid-entry-exit-logic")
-
-        # Initialize strategy and generate signals
-        self.strategy = self.initializeStrategy(strategyName=self.strategyName)
         
+        self.initializePositionSizingModel(
+            positionSizeMode=self.positionSizingMode, 
+            proportion=self.maxPositionSize,
+            data=self.fullData,
+            train=backtest)
+
         # Initialize portfolio settings
         portfolio = TradePortfolio(
             initialCapital = self.initialCapital,
@@ -66,7 +84,7 @@ class BacktesterService:
             positions = Positions(),
             tradeHistory = [],
             equityCurves = [],
-            drawdownHistory = [],
+            drawdownCurves = [],
             results = TradeMetrics(),
             tradeStatistics = TradeStatistic()
         )
@@ -75,7 +93,7 @@ class BacktesterService:
         tradeSimulator = pd.DataFrame(index = data.index)
         tradeSimulator["price"] = data["close"]
         tradeSimulator["priceChange"] = data["close"].pct_change().fillna(0.0)
-        tradeSimulator["signals"] = self.strategy.generateSignals(data)
+        tradeSimulator["signals"] = self.strategy.generateSignals(features, train=backtest)
 
         if self.entryExitLogic == EntryExitStrategy.TREND_FOLLOWING:
             tradeSimulator["position"] = tradeSimulator["signals"].replace(0, pd.NA).ffill().fillna(0) # Fowardfill previous position (LONG or SHORT)
@@ -84,13 +102,10 @@ class BacktesterService:
             tradeSimulator["position"] = tradeSimulator["signals"].copy()
             tradeSimulator["trades"] = abs(tradeSimulator["position"].diff()).fillna(abs(tradeSimulator["position"]))
 
-        print("Trade simulator: ", tradeSimulator)
-        tradeSimulator.to_csv(f"{PathConfig.FEATURES_DIR}/trade_simulator.csv")
-
         equityHistory = []
         # Execute trades
         for i in range(len(tradeSimulator)):
-            currentTime = tradeSimulator.iloc[i].index
+            currentTime = tradeSimulator.index[i]
             currentPrice = tradeSimulator.iloc[i]["price"]
 
             trade = tradeSimulator.iloc[i]["trades"]
@@ -98,7 +113,7 @@ class BacktesterService:
 
             if trade > 0:
                 if position == 1:  # LONG
-                    positionSize = self.positionSizeModel.calculatePositionSize(portfolio.equityOnCash)
+                    positionSize = self.positionSizeModel.calculatePositionSize(currentTime, portfolio.equityOnCash)
                     commissionFee = self._calculateOrderCommission(positionSize)
 
                     # Create BUY order
@@ -115,6 +130,7 @@ class BacktesterService:
                     # Update portfolio
                     portfolio.positions.updatePosition(order)
                     portfolio.equityOnCash -= positionSize
+                    portfolio.tradeHistory.append((currentTime, order))
                     
                 elif position == -1:  # SHORT
                     sellableShare = portfolio.positions.getPosition("btc").quantity
@@ -135,8 +151,9 @@ class BacktesterService:
                     # Update portfolio
                     portfolio.positions.updatePosition(order)
                     portfolio.equityOnCash += (sellAmount - commissionFee)
+                    portfolio.tradeHistory.append((currentTime, order))
 
-            currentEquity = portfolio.equityOnCash + portfolio.positions.getTotalEquityValue()
+            currentEquity = portfolio.equityOnCash + portfolio.positions.getTotalEquityValue(currentPrice=currentPrice)
             equityHistory.append(currentEquity)
 
             if currentEquity > portfolio.peakEquity:
@@ -144,7 +161,7 @@ class BacktesterService:
 
             currentDrawdown = (currentEquity - portfolio.peakEquity) / portfolio.peakEquity
 
-            portfolio.tradeHistory.append((currentTime, order))
+            
             portfolio.equityCurves.append((currentTime, currentEquity))
             portfolio.drawdownCurves.append((currentTime, currentDrawdown))
 
@@ -152,6 +169,9 @@ class BacktesterService:
         tradeSimulator["equity"] = equityHistory
         tradeSimulator["drawdown"] = (tradeSimulator["equity"] - tradeSimulator["equity"].cummax()) / tradeSimulator["equity"].cummax()
         tradeSimulator["pnl"] = tradeSimulator["equity"].diff().fillna(0)
+
+        print("Trade simulator: ", tradeSimulator)
+        tradeSimulator.to_csv(f"{PathConfig.FEATURES_DIR}/trade_simulator.csv")
 
         # Convert into tuple formats and save into portfolio
         portfolio = self._calculateMetrics(portfolio, tradeSimulator)
@@ -172,30 +192,44 @@ class BacktesterService:
         self.allowPermutation = settings.allowPermutation
         self.entryExitLogic = settings.entryExitMode
         self.positionSizingMode = settings.positionSizingMode
+        self.maxPositionSize = settings.maxPositionSize
 
-        self.featureLoader = FeatureLoader(backtestDate=self.endDate)
+        if self.forwardEndDate is not None:
+            self.featureLoader = FeatureLoader(startDate=settings.startDate, endDate=self.forwardEndDate)
+        else:
+            self.featureLoader = FeatureLoader(startDate=settings.startDate, endDate=settings.endDate)
         self.strategy: Optional[BaseStrategy] = None
         self.positionSizeModel: Optional[BasePositionSizer] = None
+        
+        
+    def initializeStrategy(self, strategyName: str, fullData: pd.DataFrame) -> BaseStrategy:
+        if strategyName == 'xgb':
+            self.strategy = XGBoostStrategy()
+            print("strategy loaded=", self.strategy)
+            self.features = self.strategy.createFeaturesAndTargetVariable(fullData)
+            self.features = self.features[self.strategy.features]
+        elif strategyName == "cnn":
+            pass
 
-        self.initializePositionSizingModel(
-            positionSizeMode=self.positionSizingMode, 
-            proportion=settings.maxPositionSize)
-        
-        
-    def initializeStrategy(self, strategyName: str) -> BaseStrategy:
-        pass
+        else:
+            raise BacktesterError("backtest/strategy-not-found")
         
 
-    def initializePositionSizingModel(self, positionSizeMode: PositionSizingMode = PositionSizingMode.FIXED, proportion: Optional[float] = 1.0) -> BasePositionSizer:
+    def initializePositionSizingModel(self, positionSizeMode: PositionSizingMode = PositionSizingMode.FIXED, proportion: Optional[float] = 0.5, data: Optional[pd.DataFrame] = None, train: bool = False) -> BasePositionSizer:
 
         if positionSizeMode == PositionSizingMode.FIXED:
             self.positionSizeModel = FixedProportionPositionSizer(proportion=proportion)
 
         elif positionSizeMode == PositionSizingMode.AUTO:
             self.positionSizeModel = HMMPositionSizer(
-                backtestEndDate=self.endDate, 
-                loader=self.featureLoader,
+                backtestEndDate=self.endDate,
                 lookBackPeriod=30)
+            hmmFeatures: List[Feature] = [
+                AdjustedReturnRate(tradeFees=self.positionSizeModel.tradeFees),
+                Volatility(windowSize=self.positionSizeModel.lookBackPeriod)
+            ]
+            self.hmmFeatures = self.featureLoader.loadFeatures(data, hmmFeatures)
+            self.positionSizeModel.initializeStrategy(self.hmmFeatures, train=train)
         
         else:
             raise BacktesterService("backtest/invalid-position-sizing-model")

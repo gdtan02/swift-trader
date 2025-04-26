@@ -16,7 +16,7 @@ class TradeMetrics(BaseModel):
     sortinoRatio: float = 0.0
     calmarRatio: float = 0.0
     maxDrawdown: float = 0.0
-    backtestDuration: int = 0  # Backtest duration in days
+    backtestDuratioInYrs: float = 0.0  # Backtest duration in years
 
 class TradeStatistic(BaseModel):
     averagePnl: float = 0.0   # Average profit and loss for the trades

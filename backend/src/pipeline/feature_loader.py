@@ -51,12 +51,12 @@ class FeatureLoader:
 
         return resultData
     
-    def loadMarketPriceData(self):
+    def loadMarketPriceData(self) -> pd.DataFrame:
         """Load the market data (close price) only for the backtester to simulate trade."""
         if "close" not in self.data.columns:
             raise BacktesterError("feature/missing-columns")
 
-        return self.data[["close"]]
+        return pd.DataFrame(self.data["close"], index=self.data.index)
     
     def _loadAndMergeData(self):
         """
